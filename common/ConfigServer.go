@@ -2,8 +2,6 @@ package common
 
 import (
 	"github.com/go-ini/ini"
-	"os"
-	"path/filepath"
 )
 
 type ConfigServer struct {
@@ -20,8 +18,8 @@ func (this *ConfigServer) Vi(region string,key string) int {
 
 //实例化
 func NewConfig() *ConfigServer {
-	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
-	//dir := "C:\\MyProject\\go\\test\\kredis"
+	//dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	dir := "C:\\MyProject\\go\\ykdb"
 	cfg, _ := ini.Load(dir + "/config/kredis.ini")
 
 	return &ConfigServer{

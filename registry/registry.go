@@ -2,16 +2,15 @@ package registry
 
 import (
 	"../server"
-	"../common"
 	"encoding/json"
 	"fmt"
 	"net/rpc"
 	"os"
-	"path/filepath"
 	"sync"
 	"time"
 )
 
+var m sync.RWMutex
 
 func Registry() {
 	Data := DataInit()
@@ -20,28 +19,33 @@ func Registry() {
 	DataServer := new(server.DataServer)
 	DataServer.Datas = &Data
 	DataServer.Expires = &Expires
+	DataServer.M = &m
 	rpc.Register(DataServer)
 
-	//计时器
-	go func() {
-		var m sync.RWMutex
+	//定时处理过期的数据
+	go func(m *sync.RWMutex, Data *map[string]string,Expires *map[string]int64) {
+		ti := time.NewTimer(time.Second * 2)
 		for{
-			time.Sleep(1*time.Second)
-			for k, v := range Expires {
-				if time.Now().UnixNano() / 1e6 >= v{
-					m.Lock()
-					delete(Data,k)
-					delete(Expires,k)
-					m.Unlock()
+			<- ti.C
+			//time.Sleep(2*time.Second)
+			(*m).RLock()
+			for k, v := range *Expires {
+				if (time.Now().UnixNano() / 1e6) >= v && v != -1 && v != 0{
+					(*m).Lock()
+					delete(*Data,k)
+					delete(*Expires,k)
+					(*m).Unlock()
 				}
 			}
+			(*m).RUnlock()
+			ti.Reset(time.Second * 2)
 		}
-	}()
+	}(&m,&Data, &Expires)
 }
 
 func DataInit() (siteinfos map[string]string) {
-	dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
-	//dir := "C:\\MyProject\\go\\test\\kredis"
+	//dir, _ := filepath.Abs(filepath.Dir(os.Args[0]))
+	dir := "C:\\MyProject\\go\\ykdb"
 	ptjsonpath:=dir + "/data/data.json"
 
 	f, err := os.Open(ptjsonpath)
